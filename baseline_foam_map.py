@@ -23,7 +23,7 @@ and any derived “distortion” fields are identically zero.
 Future models can replace the placeholder values with measured
 perturbations.
 
-Author:  ChatGPT (2024‑06)   License: MIT
+Author:  BSMEDICINEMAN (06.13.2026)   License: MIT
 """
 
 import json

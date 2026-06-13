@@ -1,0 +1,50 @@
+baseline_foam_map.py README
+
+
+
+
+Reference to the Master Equation
+
+
+
+Map the Solar System + 10 AU into interstellar space
+Grid spans [-10 AU, +10 AU] in each Cartesian direction (R_MAX_AU = 20 AU).
+The spatial domain is a direct geometric choice; the baseline foam density ρ_f (Eq. 3.2) is defined everywhere in this domain.
+
+
+Baseline spacetime‑foam matrix
+Uniform arrays for ρ_f, σ_f, η_f, scalar foam ϕ, temporal index n_t, strain = 0, energy = 0.
+Eq. 3.2 (foam fluid properties), Eq. 3.1 (scalar foam field), Eq. 6.1 (temporal refractive index), Eq. 5.17 (foam energy – zero for undisturbed case).
+
+
+Sandbox for future data
+The FoamMap object can be mutated (foam.density[...] = new_value) or extended with extra layers (e.g. a “distortion” field).
+The reference’s “driven” equations (e.g. §5.7 Mathieu‑type, §5.30 foam mode dynamics) can later write into these arrays.
+
+
+Query by coordinates
+FoamMap.get_foam_at(x, y, z) returns a dict of all baseline quantities for any spacecraft position.
+Future navigation code can call this routine to obtain the “local” foam state, exactly as required by the Navigator Mathematics (§8).
+
+
+Read foam distortions (baseline = none)
+The returned strain and energy fields are zero, matching the “no‑disturbance” assumption.
+Eq. 3.4 (warp velocity from strain) would return zero because strain = 0.
+
+
+Stream to another program for 3‑D rendering
+FoamStreamingServer opens a TCP socket, sends a JSON header, then streams each XY‑plane as a JSON‑lines message. Any open‑source visualiser (Blender‑Python, Godot, three‑js, ParaView, etc.) can connect, parse the slices, and build a volumetric texture.
+The streaming protocol is deliberately simple so it can be added to the “EM detection & navigation” pipeline (§11) without needing a custom binary format.
+
+
+Self‑contained, single file
+All logic lives in baseline_foam_map.py; only standard libraries plus numpy are required.
+No external assets; the file can be version‑controlled alongside the rest of the framework.
+
+
+
+Extending the sandbox
+
+Adding measured distortions – after a measurement campaign you can load a 3‑D NumPy array Δϕ_meas and simply do foam.scalar_foam += Δϕ_meas. All query calls will automatically return the updated values.
+Higher‑resolution regions – create a second FoamMap with a smaller spacing_au (e.g. 0.01 AU) for a region around a wormhole throat, then stitch the two grids together in the visualiser.
+Coupling to the Navigator – the Navigator equations (§8) use the foam gradient ∇ϕ. You can compute it on‑the‑fly with np.gradient(foam.scalar_foam, foam.spacing_m) and feed the result into a navigation controller.

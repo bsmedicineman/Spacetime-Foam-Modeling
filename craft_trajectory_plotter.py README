@@ -1,0 +1,222 @@
+craft_trajectory_plotter.py README
+
+
+is a stand‑alone Python program that ties together the two files you already have  
+
+baseline_foam_map.py – the static foam‑grid (no disturbances)  
+solar_foam_animation.py – the time‑dependent foam‑distortion produced by the Sun, planets, moons …
+
+and turns any spacecraft (or probe) ephemeris into a 3‑D animated trajectory that can be visualised together with the foam field in the same open‑source visualiser you used before (Paraview, Blender, three‑js, …).
+
+1️⃣  What the program does
+
+
+
+Feature
+How it is realised
+Master‑Equation reference
+
+
+
+Loads the baseline foam grid
+baseline_foam_map.FoamMap (same class you already built)
+Part 1‑3 – the foam‑fluid properties (ρ_f, σ_f, η_f)
+
+
+Loads the pre‑computed foam‑distortion frames
+Reads the foam_XXXXX.vts files written by solar_foam_animation.py
+Part 5 – foam‑field energy, Eq. 5.17 (used as phi_dist)
+
+
+Ingests NASA‑mission / probe data
+CSV or JSON files containing time‑stamped position, velocity, attitude.  The reader can also call SPICE (via spiceypy) if you supply a kernel.
+Part 8 – Navigator mathematics (Eq. 8.5, 8.6) – the program treats the supplied ephemeris as the “true” trajectory; later you can replace it with a foam‑driven navigation solution.
+
+
+Interpolates the craft state for any simulation time
+Linear interpolation in time (or cubic spline – toggle with --interp spline).
+Eq. 8.6 (proper‑time integral) gives the idea of a smooth trajectory.
+
+
+Writes per‑frame data
+Two files per frame: <br>1️⃣ foam_XXXXX.vts – unchanged, contains the foam scalar (phi_dist) and vector (foam_force). <br>2️⃣ craft_XXXXX.json – list of all active crafts with position (AU), velocity (AU day⁻¹), speed (km s⁻¹), and Euler angles (deg).
+The JSON side‑car is the same format used by solar_foam_animation.py for the planets, so the visualiser can treat probes exactly like bodies.
+
+
+Supports many crafts
+The JSON contains an array; you can add as many rows as you like.
+Part 8 – “multiple travel modes” → each craft is just another “travel mode”.
+
+
+Rewind / fast‑forward
+The frames are numbered sequentially; any VTK‑aware visualiser can scrub through them. You can change the playback speed simply by changing the time‑step (--dt‑hours).
+The viewer’s timeline is the analogue of the “proper‑time integral” (Eq. 8.6).
+
+
+Future‑proof
+The program does not modify the foam field – it only reads it.  When you later generate a disturbed foam map (e.g. from real Voyager data) you can drop the new foam_XXXXX.vts files in the same folder and the craft visualisation will automatically show the craft moving through the new disturbances.
+Part 9 – “Emergent gravity & cosmology” – you can later replace the static phi_dist with a measured one.
+
+
+
+2️⃣  How to run it
+
+          
+            
+            
+          
+     		# 1️⃣  Install the tiny extra dependency (for optional SPICE support)
+	pip install numpy pandas tqdm spiceypy  # spiceypy is optional; you can omit it
+
+	# 2️⃣  Use craft_trajectory_plotter.py
+	# 3️⃣  Prepare a CSV (or JSON) with the probe data – see the “Data format” section below.
+
+	# 4️⃣  Example command
+		python craft_trajectory_plotter.py \
+ 				   --start "2025-01-01T00:00:00" \
+   			      --end   "2025-12-31T00:00:00" \
+  			      --dt-hours 2 \
+ 				   --probe-file ./probes/voyager1.csv \
+ 				   --output ./animation_frames
+      
+--dt-hours controls the playback resolution – a smaller value gives smoother motion (but more files).  
+--interp can be linear (default) or spline for smoother interpolation.  
+Add as many --probe-file arguments as you like – each file becomes a separate craft.
+
+Open the folder ./animation_frames in Paraview (or Blender) and load the VTK files (foam_*.vts). Then load the matching JSON files (craft_*.json) as a Table To Points source; the colour and size can be driven by the speed_kms field or by a user‑defined tag.
+
+3️⃣  Data format for a probe / spacecraft
+A CSV file must have a header and the following columns (all values are in AU unless otherwise noted):
+
+
+
+Column
+Meaning
+Units / format
+
+
+
+time_iso
+ISO‑8601 timestamp (e.g. 2025-01-01T12:00:00)
+string
+
+
+x
+X‑coordinate in AU (heliocentric)
+float
+
+
+y
+Y‑coordinate in AU
+float
+
+
+z
+Z‑coordinate in AU
+float
+
+
+vx
+Velocity component X (AU day⁻¹) – optional
+float
+
+
+vy
+Velocity component Y (AU day⁻¹) – optional
+float
+
+
+vz
+Velocity component Z (AU day⁻¹) – optional
+float
+
+
+roll
+Roll angle (deg) – optional
+float
+
+
+pitch
+Pitch angle (deg) – optional
+float
+
+
+yaw
+Yaw angle (deg) – optional
+float
+
+
+name
+Human‑readable identifier (e.g. Voyager‑1) – optional, otherwise the file basename is used
+string
+
+
+color_r,g,b
+Display colour (0‑255) – optional; default = (255,255,255)
+int
+
+
+If velocity columns are missing the script will compute them by finite‑difference on the supplied positions.  Attitude columns are optional – they are stored in the JSON but are not used by the visualiser unless you map them to a rotation gizmo.
+A JSON file may be used instead; it must be a list of objects with the same keys (time_iso, x, y, …).
+
+4️⃣  FULL SOURCE CODE see file craft_trajectory_plotter.py
+
+5️⃣  HOW TO VIEW THE RESULT
+In Paraview
+
+Open the first VTK file (foam_00000.vts).  
+Apply → colour by phi_dist (blue‑to‑red).  
+Open the matching JSON (craft_00000.json) → Filters → Table To Points.  
+Set X Column = pos_au[0], Y Column = pos_au[1], Z Column = pos_au[2].  
+Choose Glyph → Sphere and map the Scale to speed_kms (or a constant).  
+Map the Color to color_rgb (use a Calculator to convert 0‑255 → 0‑1).
+
+
+Play the animation using the VCR controls – Paraview will load the next VTK/JSON pair automatically if the file pattern is set to foam_%05d.vts and craft_%05d.json.  
+Rewind / fast‑forward – just scrub the timeline; the viewer will instantly show the craft at any frame, together with the foam‑distortion “waves” it crosses.
+
+In Blender (with the Import‑VTK add‑on)
+
+File → Import → VTK Structured Grid → pick foam_00000.vts.  
+Use a Material that reads the attribute phi_dist and drives a ColorRamp (blue‑to‑red).  
+Write a tiny Python script that, on each frame change, reads the JSON side‑car, creates a UV Sphere for each craft, sets its location (pos_au → multiply by AU_M), scales it by speed_kms, and colours it with color_rgb.  
+Set the frame range to the number of generated files (0 … n_frames‑1).  The script can be attached to a frame change handler so that the scene updates automatically as you scrub.
+
+
+6️⃣  EXTENDING THE PIPELINE
+
+
+
+What you might add later
+Where to modify
+
+
+
+Real foam disturbances (e.g. Voyager‑1 measured foam)
+Replace the static foam_XXXXX.vts files with a new set generated from the measured data; the same JSON side‑car will automatically show the craft moving through the new ripples.
+
+
+Foam‑driven navigation (instead of a pre‑computed ephemeris)
+In Craft.state_at() call a physics engine that solves the Navigator equations (§8) using the local foam_force field read from the VTK file.
+
+
+Mission‑specific metadata (e.g. payload mass, thrust)
+Extend the JSON side‑car with extra keys; the visualiser can display them as tool‑tips.
+
+
+Higher‑resolution visualisation
+Reduce GRID_SPACING_AU in baseline_foam_map.py and re‑run solar_foam_animation.py. The trajectory program will automatically pick up the finer VTK files.
+
+
+Web‑based player
+Export the VTK files to glTF (via vtk → pygltflib) and ship the JSON side‑car; a three‑js app can then animate the craft and colour‑code the foam.
+
+
+
+TL;DR
+Save the script as craft_trajectory_plotter.py.Run it with the start/end dates, time‑step, and one or more probe CSV/JSON files.It will produce a folder that contains  
+
+foam_XXXXX.vts – the foam field (already produced by solar_foam_animation.py)  
+craft_XXXXX.json – the interpolated state of every spacecraft for that frame
+
+Load the pair in any VTK‑compatible 3‑D visualiser, scrub the timeline forward or backward, and watch your probes sail through a beautifully coloured, living spacetime‑foam landscape.

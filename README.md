@@ -20,6 +20,11 @@ This is not concrete evidence yet. This is the stepping stone to confirm the evi
 This project takes the previously conceived mathematics of the spacetime matrix and applies it to actual 3d modeling.
 
 
+There is a master equation list in the repo. This is an ongoing list, and currently this is what I am working with.
+
+
+
+
 
 
 # Foam‑Based Space‑Mission Experimentation  

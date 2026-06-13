@@ -5,7 +5,7 @@ An attempt to visually interpret spacetime foam and things within it
 
 All files are currently being worked on, there may be errors. This is an ongoing project.
 
-This is an attempt to confirm the existence of spacetime foam based on previously calculated metrics of the foam in my books.
+This is an attempt to confirm the existence of spacetime foam based on previously calculated metrics of the foam in my books, applying publicly available NASA mission data.
 
 Here are links on Amazon, author BS MEDICINEMAN
 

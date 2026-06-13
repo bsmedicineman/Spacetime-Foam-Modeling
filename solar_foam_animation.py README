@@ -2,6 +2,12 @@ solar_foam_animation.py README
 
 
 
+***
+data still needs updated with NASA mission data to show exact movements of the foam. real time foam disruptions are not confirmed yet. confirmation will require updated modeling
+
+
+
+
 solar_foam_animation.py is a stand‑alone Python program that
 
 loads the baseline foam grid that you created with baseline_foam_map.py,

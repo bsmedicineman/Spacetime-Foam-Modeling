@@ -1,0 +1,160 @@
+solar_foam_animation.py README 
+
+
+
+solar_foam_animation.py is a stand‑alone Python program that
+
+loads the baseline foam grid that you created with baseline_foam_map.py,
+places the Sun, planets, dwarf planets and a few large moons on that grid using a simple Keplerian ephemeris (good enough for a visual sandbox – you can later swap in a high‑precision SPICE kernel if you wish),
+computes the foam‑distortion field that each body generates at every time‑step, using the equations that appear in Master Equation Reference.docx (gravity‑sourced foam, EM‑radiation pressure, strain → warp‑velocity, etc.),
+writes the result out as a series of VTK Structured‑Grid files (one file per simulation‑step).VTK is natively understood by many open‑source 3‑D packages – Paraview, Blender (via the “Import‑VTK” add‑on), VisIt, three‑js (via vtk.js), etc.Each file contains:
+the 3‑D foam‑distortion scalar (phi_dist) – visualised as a coloured wave,
+a vector field (foam_force) that shows the local foam‑gradient force,
+a small JSON side‑car that lists the positions, radii and display colour of every body for that frame.
+
+
+
+The program is deliberately modular so you can later replace any of the physics blocks with a more sophisticated model (e.g. the full driven‑Mathieu equation of §5.7) without touching the I/O or the ephemeris code.
+
+
+
+1️⃣  QUICK‑START GUIDE
+
+          
+            
+            
+          
+# 1️⃣  Install the (very small) dependency set
+
+pip install numpy pandas pyvtk tqdm
+
+# 2️⃣  Save the script below as  solar_foam_animation.py
+
+# 3️⃣  Make sure the baseline grid file exists (the program will
+
+#      automatically import baseline_foam_map.FoamMap).
+
+python solar_foam_animation.py  --duration-days 365  --dt-hours 1  --output ./foam_frames
+      
+--duration-days – how many days of solar‑system evolution you want to render.  
+--dt-hours – simulation time‑step (1 h → 24 frames per day, good for smooth animation).  
+--output – folder where the VTK files and the bodies_*.json side‑cars will be written.
+
+Open the folder in Paraview → File → Open → select foam_*.vts.Enable the “phi_dist” colour map, add a Glyph source that reads the JSON file to display the planets (or import the JSON into Blender as an object‑instancing script).
+
+
+3️⃣  HOW THE PHYSICS MAPS TO THE MASTER‑EQUATION REFERENCE
+
+
+
+Master‑Eq. Section
+Symbol in the code
+What we compute
+
+
+
+9.1 – Gravitational potential from the foam field
+phi_g = α_g * M / r
+Scalar foam contribution from each mass (line 106).
+
+
+9.3 – Modified Poisson equation
+Superposition of all phi_g
+We simply add the potentials → linear Poisson solution for the undisturbed case.
+
+
+4.3 – Force‑balance (EM radiation pressure)
+phi_em = β_EM * P / r²
+Added only for the Sun (line 115).
+
+
+3.4 – Warp velocity from strain
+`ε =
+∇ϕ_g
+
+
+5.17 – Foam‑field energy
+phi_dist = sqrt(phi_g² + phi_em²)
+Used as the scalar field that is coloured in the visualiser (proxy for energy density).
+
+
+6.1 – Temporal refractive index
+n_t = 1 (baseline) – unchanged, but you could colour‑code phi_dist as a proxy for a local change in n_t.
+
+
+
+8.1 – Effective foam‑gradient force
+foam_force = -∇ϕ_dist
+Directly exported as a vector field for optional arrow glyphs.
+
+
+11.3 – Phase shift with foam correction
+Not explicitly needed for the sandbox, but the VTK scalar field can be fed to a ray‑tracing shader to emulate the extra Shapiro‑like delay.
+
+
+4️⃣  USING THE OUTPUT IN A 3‑D VIEWER
+Paraview (quick demo)
+
+Open the first VTK file: File → Open → foam_00000.vts.  
+Apply → in the Properties panel set Coloring to phi_dist.  
+Choose a diverging colour map (e.g. “Cool‑Warm”) – low values are blue (no distortion), high values are red (strong foam).  
+To see the bodies, go to Filters → Alphabetical → Table To Points.  
+Set X Column = pos_x, Y Column = pos_y, Z Column = pos_z.  
+Load the corresponding JSON side‑car via File → Open → bodies_00000.json.  
+Apply a Sphere glyph, set its Radius to radius_km / 2e5 (scale to visual size) and Color to the color_rgb field.
+
+
+Play the animation using the VCR controls – Paraview will automatically load the next VTK/JSON pair if you enable File → Load State and set the “File Pattern” to foam_%05d.vts.
+
+Blender (via the Import‑VTK add‑on)
+
+Install the Import‑VTK add‑on (available from the Blender market or as open‑source).  
+File → Import → VTK Structured Grid. Choose foam_00000.vts.  
+In the Shader Editor use the Attribute node named phi_dist to drive a ColorRamp (blue‑to‑red).  
+For the bodies, write a tiny Python script that reads each bodies_*.json and creates a UV Sphere at the given position, scales it by radius_km, and sets its material colour to color_rgb.  
+Enable Timeline playback; a simple driver can change the file path each frame (foam_{frame:05d}.vts).
+
+
+5️⃣  EXTENDING / REFINING THE MODEL
+
+
+
+What you might want →
+Where to edit in the script
+
+
+
+Higher‑precision ephemerides (e.g. JPL DE440)
+Replace keplerian_position() with a call to spiceypy (download kernels).
+
+
+Full driven‑Mathieu foam response (Eq. 5.7)
+In body_foam_contribution() compute a driven oscillator A_i(t) = A0 / sqrt((ω_i²‑ω²)² + (γ ω)²) and add its spatial mode shape to phi_dist.
+
+
+Time‑varying EM radiation (solar cycle)
+Make phi_em a function of t_seconds (e.g. 10 % sinusoidal modulation).
+
+
+Include plasma‑induced phase shift (Eq. 11.3)
+Add an extra scalar term proportional to electron_density / r².
+
+
+Export to glTF (for web‑based three‑js)
+Replace the VTK writer with pyrender/trimesh export (mesh.export('frame_#.gltf')).
+
+
+GPU‑accelerated field evaluation
+Use cupy or numba to accelerate the body_foam_contribution loop for many bodies or higher resolution.
+
+
+
+6️⃣  SUMMARY
+
+Baseline foam grid → imported from your existing program.  
+Solar‑system bodies → simple Keplerian ephemeris, colour‑coded, realistic radii.  
+Foam physics → gravitational and EM sources from the master‑equation document, superposed linearly, turned into a scalar distortion field (phi_dist) and a vector gradient (foam_force).  
+Output → per‑time‑step VTK Structured Grid + JSON side‑car – instantly usable in any open‑source 3‑D visualiser.  
+Extensible → swap in more sophisticated dynamics (driven Mathieu, layer‑coupling, full SPICE ephemeris) without touching the I/O.
+
+Run the script, load the generated files, and you’ll have a living 3‑D sandbox where the Sun and planets sail through a calm foam background, leaving coloured ripples that faithfully follow the equations you defined in Master Equation Reference.docx. Happy visualising!

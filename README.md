@@ -10,7 +10,9 @@ This is an attempt to confirm the existence of spacetime foam based on previousl
 Here are links on Amazon, author BS MEDICINEMAN
 
 https://a.co/d/0aMbjAxN     1/X=Y/1: As above, so below
+
 https://a.co/d/0ewA0kyq     THE GUIDE OF THE MANY WAYS: The Navigator
+
 https://a.co/d/07EBjbCg     THE LOOKING GLASS: Piloting through an eliptoid toroidal lense
 
 
